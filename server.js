@@ -1,30 +1,3 @@
-// const express = require("express");
-// const db = require("./db/connection");
-// const apiRoutes = require("./routes/apiRoutes");
-
-// const PORT = process.env.PORT || 3001;
-// const app = express();
-
-// // Express middleware
-// app.use(express.urlencoded({ extended: false }));
-// app.use(express.json());
-
-// // Use apiRoutes
-// app.use("/api", apiRoutes);
-
-// // Default response for any other request (Not Found)
-// app.use((req, res) => {
-// 	res.status(404).end();
-// });
-
-// // Start server after DB connection
-// db.connect(err => {
-// 	if (err) throw err;
-// 	console.log("Database connected.");
-// 	app.listen(PORT, () => {
-// 		console.log(`Server running on port ${PORT}`);
-// 	});
-// });
 const table = require("console.table");
 const db = require("./db/connection");
 const express = require("express");
@@ -39,7 +12,7 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 // Add after Express middleware
-// app.use("/api", apiRoutes);
+app.use("/api", apiRoutes);
 
 function questions() {
 	inquirer
@@ -49,6 +22,7 @@ function questions() {
 			choices: [
 				"view all of the employees",
 				"view all of the departments",
+				"view all of the roles",
 				"add an employee",
 				"add a department",
 				"add a role",
@@ -66,6 +40,10 @@ function questions() {
 
 				case "view all of the departments":
 					viewDepartments();
+					break;
+
+				case "view all of the roles":
+					viewRoles();
 					break;
 
 				case "add an employee":
@@ -93,7 +71,7 @@ function questions() {
 
 // Get all employees
 function viewEmployees() {
-	app.get("/api/employees", (req, res) => {
+	app.get("/api/employee", (req, res) => {
 		const sql = `SELECT * FROM employees`;
 
 		db.query(sql, (err, rows) => {
@@ -108,12 +86,13 @@ function viewEmployees() {
 		});
 	});
 	console.table(data);
+	questions();
 }
 
 // Get all departments
 function viewDepartments() {
-	app.get("/api/employees", (req, res) => {
-		const sql = `SELECT * FROM employees`;
+	app.get("/api/department", (req, res) => {
+		const sql = `SELECT * FROM department`;
 
 		db.query(sql, (err, rows) => {
 			if (err) {
@@ -127,160 +106,155 @@ function viewDepartments() {
 		});
 	});
 	console.table(data);
+	questions();
 }
 
-// Get single candidate with party affiliation
-app.get("/api/candidate/:id", (req, res) => {
-	const sql = `SELECT candidates.*, parties.name
-               AS party_name
-               FROM candidates
-               LEFT JOIN parties
-               ON candidates.party_id = parties.id
-               WHERE candidates.id = ?`;
-	const params = [req.params.id];
+// Get all roles
+function viewRoles() {
+	app.get("/api/roles", (req, res) => {
+		const sql = `SELECT * FROM roles`;
 
-	db.query(sql, params, (err, row) => {
-		if (err) {
-			res.status(400).json({ error: err.message });
-			return;
-		}
-		res.json({
-			message: "success",
-			data: row,
-		});
-	});
-});
-
-// Create a candidate
-app.post("/api/candidate", ({ body }, res) => {
-	// Candidate is allowed not to be affiliated with a party
-	const errors = inputCheck(body, "first_name", "last_name", "industry_connected");
-	if (errors) {
-		res.status(400).json({ error: errors });
-		return;
-	}
-
-	const sql = `INSERT INTO candidates (first_name, last_name, industry_connected, party_id) VALUES (?,?,?,?)`;
-	const params = [body.first_name, body.last_name, body.industry_connected, body.party_id];
-
-	db.query(sql, params, (err, result) => {
-		if (err) {
-			res.status(400).json({ error: err.message });
-			return;
-		}
-		res.json({
-			message: "success",
-			data: body,
-			changes: result.affectedRows,
-		});
-	});
-});
-
-// Update a candidate's party
-app.put("/api/candidate/:id", (req, res) => {
-	// Candidate is allowed to not have party affiliation
-	const errors = inputCheck(req.body, "party_id");
-	if (errors) {
-		res.status(400).json({ error: errors });
-		return;
-	}
-
-	const sql = `UPDATE candidates SET party_id = ?
-               WHERE id = ?`;
-	const params = [req.body.party_id, req.params.id];
-	db.query(sql, params, (err, result) => {
-		if (err) {
-			res.status(400).json({ error: err.message });
-			// check if a record was found
-		} else if (!result.affectedRows) {
-			res.json({
-				message: "Candidate not found",
-			});
-		} else {
+		db.query(sql, (err, rows) => {
+			if (err) {
+				res.status(500).json({ error: err.message });
+				return;
+			}
 			res.json({
 				message: "success",
-				data: req.body,
-				changes: result.affectedRows,
+				data: rows,
 			});
-		}
-	});
-});
-
-// Delete a candidate
-app.delete("/api/candidate/:id", (req, res) => {
-	const sql = `DELETE FROM candidates WHERE id = ?`;
-	const params = [req.params.id];
-	db.query(sql, params, (err, result) => {
-		if (err) {
-			res.statusMessage(400).json({ error: res.message });
-		} else if (!result.affectedRows) {
-			res.json({
-				message: "Candidate not found",
-			});
-		} else {
-			res.json({
-				message: "deleted",
-				changes: result.affectedRows,
-				id: req.params.id,
-			});
-		}
-	});
-});
-
-// Get all parties
-app.get("/api/parties", (req, res) => {
-	const sql = `SELECT * FROM parties`;
-	db.query(sql, (err, rows) => {
-		if (err) {
-			res.status(500).json({ error: err.message });
-			return;
-		}
-		res.json({
-			message: "success",
-			data: rows,
 		});
 	});
-});
+	console.table(data);
+	questions();
+}
 
-// Get single party
-app.get("/api/party/:id", (req, res) => {
-	const sql = `SELECT * FROM parties WHERE id = ?`;
-	const params = [req.params.id];
+//add department
+function addDepartment() {
+	inquirer
+		.prompt([
+			{
+				type: "input",
+				name: "department",
+				message: "Which Department did you want to add?",
+			},
+		])
+		.then(function (res) {
+			// Create a department
+			app.post("/api/department", ({ body }, res) => {
+				// department is added
+				const errors = inputCheck(body, "name");
+				if (errors) {
+					res.status(400).json({ error: errors });
+					return;
+				}
 
-	db.query(sql, params, (err, row) => {
-		if (err) {
-			res.status(400).json({ error: err.message });
+				const sql = `INSERT INTO department (name) VALUES (?)`;
+				const params = [body.name];
+
+				db.query(sql, params, (err, result) => {
+					if (err) {
+						res.status(400).json({ error: err.message });
+						return;
+					}
+					res.json({
+						message: "success",
+						data: body,
+						changes: result.affectedRows,
+					});
+				});
+			});
+		});
+	questions();
+}
+
+//add role
+function addRole() {
+	// Create a department
+	app.post("/api/roles", ({ body }, res) => {
+		// department is added
+		const errors = inputCheck(body, "title", "salary", "dept_id");
+		if (errors) {
+			res.status(400).json({ error: errors });
 			return;
 		}
-		res.json({
-			message: "success",
-			data: row,
+
+		const sql = `INSERT INTO roles (title, salary, dept_id) VALUES (?,?,?)`;
+		const params = [body.title, body.salary, body.department_id];
+
+		db.query(sql, params, (err, result) => {
+			if (err) {
+				res.status(400).json({ error: err.message });
+				return;
+			}
+			res.json({
+				message: "success",
+				data: body,
+				changes: result.affectedRows,
+			});
 		});
 	});
-});
+	questions();
+}
 
-// Delete a party
-app.delete("/api/party/:id", (req, res) => {
-	const sql = `DELETE FROM parties WHERE id = ?`;
-	const params = [req.params.id];
+//update employee role
+function updateEmployeeRole() {
+	inquirer
+		.prompt([
+			{
+				message: "which employee would you like to update? (use first name only for now)",
+				type: "input",
+				name: "name",
+			},
+			{
+				message: "enter the new role ID:",
+				type: "number",
+				name: "role_id",
+			},
+		])
+		.then(function (response) {
+			db.query("UPDATE employee SET role_id = ? WHERE first_name = ?", [response.role_id, response.name], function (err, data) {});
+			questions();
+		});
+}
 
-	db.query(sql, params, (err, result) => {
-		if (err) {
-			res.status(400).json({ error: res.message });
-			// checks if anything was deleted
-		} else if (!result.affectedRows) {
-			res.json({
-				message: "Party not found",
-			});
-		} else {
-			res.json({
-				message: "deleted",
-				changes: result.affectedRows,
-				id: req.params.id,
-			});
-		}
-	});
-});
+//add employee
+function addEmployee() {
+	inquirer
+		.prompt([
+			{
+				type: "input",
+				name: "firstName",
+				message: "What is the employee's first name?",
+			},
+			{
+				type: "input",
+				name: "lastName",
+				message: "What is the employee's last name?",
+			},
+			{
+				type: "number",
+				name: "roleId",
+				message: "What is the employee's role ID",
+			},
+			{
+				type: "number",
+				name: "managerId",
+				message: "What is the employee's manager's ID?",
+			},
+		])
+		.then(function (res) {
+			db.query(
+				"INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)",
+				[res.firstName, res.lastName, res.roleId, res.managerId],
+				function (err, data) {
+					if (err) throw err;
+					console.table("Successfully Inserted");
+					questions();
+				}
+			);
+		});
+}
 
 // Not Found response for unmatched routes
 app.use((req, res) => {

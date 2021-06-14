@@ -6,13 +6,13 @@ CREATE TABLE roles(
   PRIMARY KEY(role_id)
 );
 
-CREATE TABLE departments(
+CREATE TABLE department(
   dept_id INTEGER AUTO_INCREMENT NOT NULL,
   dept_name VARCHAR(30),
   PRIMARY KEY(dept_id)
 );
 
-CREATE TABLE employees(
+CREATE TABLE employee(
   id INTEGER AUTO_INCREMENT NOT NULL,
   first_name VARCHAR(30),
   last_name VARCHAR(30),
